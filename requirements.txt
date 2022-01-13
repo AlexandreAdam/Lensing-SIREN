@@ -3,5 +3,6 @@ astropy
 torch
 torchmeta
 matplotlib
+sklearn
 #vsitmann/siren
 #tristandeleu/pytorch-maml
