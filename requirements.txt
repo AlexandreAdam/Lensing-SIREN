@@ -1,6 +1,7 @@
 numpy
 astropy
 torch
+torchmeta
 matplotlib
 #vsitmann/siren
 #tristandeleu/pytorch-maml
