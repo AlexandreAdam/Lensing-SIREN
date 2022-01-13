@@ -1,5 +1,6 @@
 """
-Author: Vincent Sitzmann, Alexandre Adam
+Author: Vincent Sitzmann
+Last modification: Alexandre Adam, 13 Jan. 2022
 
 Siren model with meta learning plug-ins.
 
