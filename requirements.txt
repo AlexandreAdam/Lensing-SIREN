@@ -1,0 +1,6 @@
+numpy
+astropy
+torch
+matplotlib
+#vsitmann/siren
+#tristandeleu/pytorch-maml
