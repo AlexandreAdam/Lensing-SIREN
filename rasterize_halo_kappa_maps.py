@@ -1,8 +1,9 @@
 """
 Author: Alexandre Adam
+Last modification: 13 Dec. 2021
 
 Distributed strategy to rasterize kappa maps from 3D particle distribution 
-from Illustris TNG simulations. 
+of an Illustris TNG simulation.
 
 Requirement (not in main requirement.txt):
     tensorflow==2.7.0
