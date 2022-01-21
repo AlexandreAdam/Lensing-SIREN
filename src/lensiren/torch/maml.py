@@ -33,7 +33,7 @@ from tqdm import tqdm
 
 from collections import OrderedDict
 from torchmeta.utils import gradient_update_parameters
-from maml.utils import tensors_to_device, compute_accuracy
+from .utils import tensors_to_device, compute_accuracy
 
 __all__ = ['ModelAgnosticMetaLearning', 'MAML', 'FOMAML']
 
@@ -255,7 +255,9 @@ class ModelAgnosticMetaLearning(object):
 
                 num_batches += 1
 
+
 MAML = ModelAgnosticMetaLearning
+
 
 class FOMAML(ModelAgnosticMetaLearning):
     def __init__(self, model, optimizer=None, step_size=0.1,

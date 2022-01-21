@@ -29,10 +29,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import torch
-from torch import nn
-from collections import OrderedDict
-import modules
+from .modules import *
 
 
 class HyperNetwork(nn.Module):
@@ -55,7 +52,7 @@ class HyperNetwork(nn.Module):
             self.names.append(name)
             self.param_shapes.append(param.size())
 
-            hn = modules.FCBlock(in_features=hyper_in_features, out_features=int(torch.prod(torch.tensor(param.size()))),
+            hn = FCBlock(in_features=hyper_in_features, out_features=int(torch.prod(torch.tensor(param.size()))),
                                  num_hidden_layers=hyper_hidden_layers, hidden_features=hyper_hidden_features,
                                  outermost_linear=True, nonlinearity='relu')
             self.nets.append(hn)
@@ -85,12 +82,9 @@ class NeuralProcessImplicit2DHypernet(nn.Module):
         super().__init__()
 
         latent_dim = 256
-        self.hypo_net = modules.SingleBVPNet(out_features=out_features, type='sine', sidelength=image_resolution,
-                                             in_features=2)
-        self.hyper_net = HyperNetwork(hyper_in_features=latent_dim, hyper_hidden_layers=1, hyper_hidden_features=256,
-                                      hypo_module=self.hypo_net)
-        self.set_encoder = modules.SetEncoder(in_features=in_features, out_features=latent_dim, num_hidden_layers=2,
-                                              hidden_features=latent_dim, nonlinearity=encoder_nl)
+        self.hypo_net = SingleBVPNet(out_features=out_features, type='sine', sidelength=image_resolution, in_features=2)
+        self.hyper_net = HyperNetwork(hyper_in_features=latent_dim, hyper_hidden_layers=1, hyper_hidden_features=256, hypo_module=self.hypo_net)
+        self.set_encoder = SetEncoder(in_features=in_features, out_features=latent_dim, num_hidden_layers=2, hidden_features=latent_dim, nonlinearity=encoder_nl)
         print(self)
 
     def freeze_hypernet(self):
@@ -127,10 +121,8 @@ class ConvolutionalNeuralProcessImplicit2DHypernet(nn.Module):
             self.encoder = modules.PartialConvImgEncoder(channel=in_features, image_resolution=image_resolution)
         else:
             self.encoder = modules.ConvImgEncoder(channel=in_features, image_resolution=image_resolution)
-        self.hypo_net = modules.SingleBVPNet(out_features=out_features, type='sine', sidelength=image_resolution,
-                                             in_features=2)
-        self.hyper_net = HyperNetwork(hyper_in_features=latent_dim, hyper_hidden_layers=1, hyper_hidden_features=256,
-                                      hypo_module=self.hypo_net)
+        self.hypo_net = modules.SingleBVPNet(out_features=out_features, type='sine', sidelength=image_resolution, in_features=2)
+        self.hyper_net = HyperNetwork(hyper_in_features=latent_dim, hyper_hidden_layers=1, hyper_hidden_features=256, hypo_module=self.hypo_net)
         print(self)
 
     def forward(self, model_input):

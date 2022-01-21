@@ -8,9 +8,12 @@ Code taken in part from https://github.com/vsitzmann/metasdf and original
 siren repo.
 """
 
-from modules import FCBlock, BatchLinear 
-from torchmeta.modules import (MetaModule, MetaSequential)
+from .modules import BatchLinear
+from torchmeta.modules import MetaModule
 import torch
+from torch import nn
+import numpy as np
+
 
 class SineLayer(MetaModule):
     # See paper sec. 3.2, final paragraph, and supplement Sec. 1.5 for discussion of omega_0.
@@ -22,7 +25,7 @@ class SineLayer(MetaModule):
     # If is_first=False, then the weights will be divided by omega_0 so as to keep the magnitude of
     # activations constant, but boost gradients to the weight matrix (see supplement Sec. 1.5)
 
-    def __init__(self, in_features, out_features, bias=True, is_first=False, omega_0=30):
+    def __init__(self, in_features, out_features, bias=True, is_first=False, omega_0:float=30):
         super().__init__()
         self.omega_0 = float(omega_0)
 
@@ -35,38 +38,42 @@ class SineLayer(MetaModule):
     def init_weights(self):
         with torch.no_grad():
             if self.is_first:
-                self.linear.weight.uniform_(-1 / self.in_features,
-                                            1 / self.in_features)
+                self.linear.weight.uniform_(-1 / self.in_features, 1 / self.in_features)
             else:
-                self.linear.weight.uniform_(-np.sqrt(6 / self.in_features) / self.omega_0,
-                                            np.sqrt(6 / self.in_features) / self.omega_0)
+                self.linear.weight.uniform_(-np.sqrt(6 / self.in_features) / self.omega_0, np.sqrt(6 / self.in_features) / self.omega_0)
 
     def forward(self, input, params=None):
         intermed = self.linear(input, params=self.get_subdict(params, 'linear'))
         return torch.sin(self.omega_0 * intermed)
 
+
 class Siren(MetaModule):
-    def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False,
-                 first_omega_0=30, hidden_omega_0=30., special_first=True):
+    def __init__(
+            self,
+            in_features,
+            hidden_features,
+            hidden_layers,
+            out_features,
+            outermost_linear=False,
+            first_omega_0:float=30,
+            hidden_omega_0:float=30.,
+            special_first=True):
         super().__init__()
         self.hidden_omega_0 = hidden_omega_0
 
         layer = SineLayer
 
         self.net = []
-        self.net.append(layer(in_features, hidden_features,
-                              is_first=special_first, omega_0=first_omega_0))
+        self.net.append(layer(in_features, hidden_features, is_first=special_first, omega_0=first_omega_0))
 
         for i in range(hidden_layers):
-            self.net.append(layer(hidden_features, hidden_features,
-                                  is_first=False, omega_0=hidden_omega_0))
+            self.net.append(layer(hidden_features, hidden_features, is_first=False, omega_0=hidden_omega_0))
 
         if outermost_linear:
             final_linear = BatchLinear(hidden_features, out_features)
 
             with torch.no_grad():
-                final_linear.weight.uniform_(-np.sqrt(6 / hidden_features) / 30.,
-                                             np.sqrt(6 / hidden_features) / 30.)
+                final_linear.weight.uniform_(-np.sqrt(6 / hidden_features) / 30., np.sqrt(6 / hidden_features) / 30.)
             self.net.append(final_linear)
         else:
             self.net.append(layer(hidden_features, out_features, is_first=False, omega_0=hidden_omega_0))
@@ -75,10 +82,8 @@ class Siren(MetaModule):
 
     def forward(self, coords, params=None):
         x = coords
-
         for i, layer in enumerate(self.net):
             x = layer(x, params=self.get_subdict(params, f'net.{i}'))
-
         return x
     
     

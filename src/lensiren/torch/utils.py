@@ -22,9 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 import torch
-
 from collections import OrderedDict
-from torchmeta.modules import MetaModule
 
 
 def compute_accuracy(logits, targets):
@@ -33,6 +31,7 @@ def compute_accuracy(logits, targets):
         _, predictions = torch.max(logits, dim=1)
         accuracy = torch.mean(predictions.eq(targets).float())
     return accuracy.item()
+
 
 def tensors_to_device(tensors, device=torch.device('cpu')):
     """Place a collection of tensors in a specific device"""
@@ -46,6 +45,7 @@ def tensors_to_device(tensors, device=torch.device('cpu')):
             for (name, tensor) in tensors.items()])
     else:
         raise NotImplementedError()
+
 
 class ToTensor1D(object):
     """Convert a `numpy.ndarray` to tensor. Unlike `ToTensor` from torchvision,
