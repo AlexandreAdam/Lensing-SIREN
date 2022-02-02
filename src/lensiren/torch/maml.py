@@ -1,6 +1,6 @@
 """
 author: Tristan Deleu
-modified by: Alexandre Adam (January 25, 2022)
+last modification by: Alexandre Adam (February 2, 2022): Adapted to SIREN and TNGDataset
 
 MIT License
 
@@ -26,18 +26,19 @@ SOFTWARE.
 """
 
 import torch
-import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
 
 from collections import OrderedDict
 from torchmeta.utils import gradient_update_parameters
-from .utils import tensors_to_device, compute_accuracy
+from lensiren.torch.utils import tensors_to_device
+from lensiren.torch.loss import SirenLoss
 
-__all__ = ['ModelAgnosticMetaLearning', 'MAML']
+
+__all__ = ['SirenMetaLearning']
 
 
-class ModelAgnosticMetaLearning(object):
+class SirenMetaLearning(object):
     """Meta-learner class for Model-Agnostic Meta-Learning [1].
     Parameters
     ----------
@@ -79,18 +80,27 @@ class ModelAgnosticMetaLearning(object):
            International Conference on Learning Representations (ICLR).
            (https://arxiv.org/abs/1810.09502)
     """
-    def __init__(self, model, optimizer=None, step_size=0.1, first_order=False,
-                 learn_step_size=False, per_param_step_size=False,
-                 num_adaptation_steps=1, scheduler=None,
-                 loss_function=F.cross_entropy, device=None):
+    def __init__(
+            self,
+            model,
+            optimizer=None,
+            loss_type="image",
+            step_size=0.1,
+            first_order=False,
+            learn_step_size=False,
+            per_param_step_size=False,
+            num_adaptation_steps=1,
+            scheduler=None,
+            device=None
+    ):
         self.model = model.to(device=device)
         self.optimizer = optimizer
         self.step_size = step_size
         self.first_order = first_order
         self.num_adaptation_steps = num_adaptation_steps
         self.scheduler = scheduler
-        self.loss_function = loss_function
         self.device = device
+        self.loss_function = SirenLoss(loss_type).loss()
 
         if per_param_step_size:
             self.step_size = OrderedDict((name, torch.tensor(step_size, dtype=param.dtype, device=self.device, requires_grad=learn_step_size)) for (name, param) in model.meta_named_parameters())
@@ -109,7 +119,7 @@ class ModelAgnosticMetaLearning(object):
             raise RuntimeError('The batch does not contain any test dataset.')
 
         _, test_targets = batch['test']
-        num_tasks = test_targets.size(0)
+        num_tasks = test_targets["image"].size(0)
         results = {
             'num_tasks': num_tasks,
             'inner_losses': np.zeros((self.num_adaptation_steps, num_tasks), dtype=np.float32),
@@ -118,7 +128,11 @@ class ModelAgnosticMetaLearning(object):
         }
 
         mean_outer_loss = torch.tensor(0., device=self.device)
-        for task_id, (train_inputs, train_targets, test_inputs, test_targets) in enumerate(zip(*batch['train'], *batch['test'])):
+        for task_id in range(num_tasks):
+            train_inputs = batch["train"][0][task_id]
+            train_targets = {key: target[task_id] for (key, target) in batch["train"][1].items()}
+            test_inputs = batch["test"][0][task_id]
+            test_targets = {key: target[task_id] for (key, target) in batch["test"][1].items()}
             params, adaptation_results = self.adapt(
                 train_inputs,
                 train_targets,
@@ -130,7 +144,7 @@ class ModelAgnosticMetaLearning(object):
 
             with torch.set_grad_enabled(self.model.training):
                 test_logits = self.model(test_inputs, params=params)
-                outer_loss = self.loss_function(test_logits, test_targets)
+                outer_loss = self.loss_function(test_inputs, test_logits, test_targets)
                 results['outer_losses'][task_id] = outer_loss.item()
                 mean_outer_loss += outer_loss
 
@@ -145,9 +159,8 @@ class ModelAgnosticMetaLearning(object):
 
         for step in range(num_adaptation_steps):
             logits = self.model(inputs, params=params)
-            inner_loss = self.loss_function(logits, targets)
+            inner_loss = self.loss_function(inputs, logits, targets)
             results['inner_losses'][step] = inner_loss.item()
-
             self.model.zero_grad()
             params = gradient_update_parameters(self.model, inner_loss,
                 step_size=step_size, params=params,
@@ -160,18 +173,9 @@ class ModelAgnosticMetaLearning(object):
             for results in self.train_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
                 postfix = {'loss': '{0:.4f}'.format(results['mean_outer_loss'])}
-                if 'accuracies_after' in results:
-                    postfix['accuracy'] = '{0:.4f}'.format(
-                        np.mean(results['accuracies_after']))
                 pbar.set_postfix(**postfix)
 
     def train_iter(self, dataloader, max_batches=500):
-        if self.optimizer is None:
-            raise RuntimeError('Trying to call `train_iter`, while the '
-                'optimizer is `None`. In order to train `{0}`, you must '
-                'specify a Pytorch optimizer as the argument of `{0}` '
-                '(eg. `{0}(model, optimizer=torch.optim.SGD(model.'
-                'parameters(), lr=0.01), ...).'.format(__class__.__name__))
         num_batches = 0
         self.model.train()
         while num_batches < max_batches:
@@ -199,8 +203,7 @@ class ModelAgnosticMetaLearning(object):
             for results in self.evaluate_iter(dataloader, max_batches=max_batches):
                 pbar.update(1)
                 count += 1
-                mean_outer_loss += (results['mean_outer_loss']
-                    - mean_outer_loss) / count
+                mean_outer_loss += (results['mean_outer_loss'] - mean_outer_loss) / count
                 postfix = {'loss': '{0:.4f}'.format(mean_outer_loss)}
                 if 'accuracies_after' in results:
                     mean_accuracy += (np.mean(results['accuracies_after'])
@@ -228,5 +231,3 @@ class ModelAgnosticMetaLearning(object):
 
                 num_batches += 1
 
-
-MAML = ModelAgnosticMetaLearning

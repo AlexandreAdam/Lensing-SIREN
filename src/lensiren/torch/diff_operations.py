@@ -29,6 +29,8 @@ SOFTWARE.
 import torch
 from torch.autograd import grad
 
+__all__ = ["hessian", "laplace", "divergence", "gradient", "jacobian"]
+
 
 def hessian(y, x):
     ''' hessian of y wrt x

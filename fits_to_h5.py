@@ -15,6 +15,8 @@ def main(args):
         hf.create_dataset(name="shear1", shape=[len(files), pixels, pixels, 1], dtype=np.float32)
         hf.create_dataset(name="shear2", shape=[len(files), pixels, pixels, 1], dtype=np.float32)
         hf.create_dataset(name="kappa_id",  shape=[len(files)], dtype='i8')
+        hf.create_dataset(name="pixel_scale",  shape=[len(files)], dtype=np.float32)
+
         for i, file in enumerate(tqdm(files)):
             data = fits.open(file)
             hf["kappa"][i] = data["PRIMARY"].data[..., np.newaxis].astype(np.float32)
