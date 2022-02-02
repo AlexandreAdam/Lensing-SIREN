@@ -1,7 +1,6 @@
 """
 author: Tristan Deleu
-
-MAML algorithm implemented in pytorch version==1.5
+modified by: Alexandre Adam (January 25, 2022)
 
 MIT License
 
@@ -35,7 +34,7 @@ from collections import OrderedDict
 from torchmeta.utils import gradient_update_parameters
 from .utils import tensors_to_device, compute_accuracy
 
-__all__ = ['ModelAgnosticMetaLearning', 'MAML', 'FOMAML']
+__all__ = ['ModelAgnosticMetaLearning', 'MAML']
 
 
 class ModelAgnosticMetaLearning(object):
@@ -43,7 +42,7 @@ class ModelAgnosticMetaLearning(object):
     Parameters
     ----------
     model : `torchmeta.modules.MetaModule` instance
-        The model.
+        The SIREN model.
     optimizer : `torch.optim.Optimizer` instance, optional
         The optimizer for the outer-loop optimization procedure. This argument
         is optional for evaluation.
@@ -94,22 +93,16 @@ class ModelAgnosticMetaLearning(object):
         self.device = device
 
         if per_param_step_size:
-            self.step_size = OrderedDict((name, torch.tensor(step_size,
-                dtype=param.dtype, device=self.device,
-                requires_grad=learn_step_size)) for (name, param)
-                in model.meta_named_parameters())
+            self.step_size = OrderedDict((name, torch.tensor(step_size, dtype=param.dtype, device=self.device, requires_grad=learn_step_size)) for (name, param) in model.meta_named_parameters())
         else:
-            self.step_size = torch.tensor(step_size, dtype=torch.float32,
-                device=self.device, requires_grad=learn_step_size)
+            self.step_size = torch.tensor(step_size, dtype=torch.float32, device=self.device, requires_grad=learn_step_size)
 
         if (self.optimizer is not None) and learn_step_size:
-            self.optimizer.add_param_group({'params': self.step_size.values()
-                if per_param_step_size else [self.step_size]})
+            self.optimizer.add_param_group({'params': self.step_size.values() if per_param_step_size else [self.step_size]})
             if scheduler is not None:
                 for group in self.optimizer.param_groups:
                     group.setdefault('initial_lr', group['lr'])
-                self.scheduler.base_lrs([group['initial_lr']
-                    for group in self.optimizer.param_groups])
+                self.scheduler.base_lrs([group['initial_lr'] for group in self.optimizer.param_groups])
 
     def get_outer_loss(self, batch):
         if 'test' not in batch:
@@ -117,31 +110,23 @@ class ModelAgnosticMetaLearning(object):
 
         _, test_targets = batch['test']
         num_tasks = test_targets.size(0)
-        is_classification_task = (not test_targets.dtype.is_floating_point)
         results = {
             'num_tasks': num_tasks,
-            'inner_losses': np.zeros((self.num_adaptation_steps,
-                num_tasks), dtype=np.float32),
+            'inner_losses': np.zeros((self.num_adaptation_steps, num_tasks), dtype=np.float32),
             'outer_losses': np.zeros((num_tasks,), dtype=np.float32),
             'mean_outer_loss': 0.
         }
-        if is_classification_task:
-            results.update({
-                'accuracies_before': np.zeros((num_tasks,), dtype=np.float32),
-                'accuracies_after': np.zeros((num_tasks,), dtype=np.float32)
-            })
 
         mean_outer_loss = torch.tensor(0., device=self.device)
-        for task_id, (train_inputs, train_targets, test_inputs, test_targets) \
-                in enumerate(zip(*batch['train'], *batch['test'])):
-            params, adaptation_results = self.adapt(train_inputs, train_targets,
-                is_classification_task=is_classification_task,
+        for task_id, (train_inputs, train_targets, test_inputs, test_targets) in enumerate(zip(*batch['train'], *batch['test'])):
+            params, adaptation_results = self.adapt(
+                train_inputs,
+                train_targets,
                 num_adaptation_steps=self.num_adaptation_steps,
-                step_size=self.step_size, first_order=self.first_order)
+                step_size=self.step_size,
+                first_order=self.first_order)
 
             results['inner_losses'][:, task_id] = adaptation_results['inner_losses']
-            if is_classification_task:
-                results['accuracies_before'][task_id] = adaptation_results['accuracy_before']
 
             with torch.set_grad_enabled(self.model.training):
                 test_logits = self.model(test_inputs, params=params)
@@ -149,31 +134,19 @@ class ModelAgnosticMetaLearning(object):
                 results['outer_losses'][task_id] = outer_loss.item()
                 mean_outer_loss += outer_loss
 
-            if is_classification_task:
-                results['accuracies_after'][task_id] = compute_accuracy(
-                    test_logits, test_targets)
-
         mean_outer_loss.div_(num_tasks)
         results['mean_outer_loss'] = mean_outer_loss.item()
 
         return mean_outer_loss, results
 
-    def adapt(self, inputs, targets, is_classification_task=None,
-              num_adaptation_steps=1, step_size=0.1, first_order=False):
-        if is_classification_task is None:
-            is_classification_task = (not targets.dtype.is_floating_point)
+    def adapt(self, inputs, targets, num_adaptation_steps=1, step_size=0.1, first_order=False):
         params = None
-
-        results = {'inner_losses': np.zeros(
-            (num_adaptation_steps,), dtype=np.float32)}
+        results = {'inner_losses': np.zeros((num_adaptation_steps,), dtype=np.float32)}
 
         for step in range(num_adaptation_steps):
             logits = self.model(inputs, params=params)
             inner_loss = self.loss_function(logits, targets)
             results['inner_losses'][step] = inner_loss.item()
-
-            if (step == 0) and is_classification_task:
-                results['accuracy_before'] = compute_accuracy(logits, targets)
 
             self.model.zero_grad()
             params = gradient_update_parameters(self.model, inner_loss,
@@ -257,15 +230,3 @@ class ModelAgnosticMetaLearning(object):
 
 
 MAML = ModelAgnosticMetaLearning
-
-
-class FOMAML(ModelAgnosticMetaLearning):
-    def __init__(self, model, optimizer=None, step_size=0.1,
-                 learn_step_size=False, per_param_step_size=False,
-                 num_adaptation_steps=1, scheduler=None,
-                 loss_function=F.cross_entropy, device=None):
-        super(FOMAML, self).__init__(model, optimizer=optimizer, first_order=True,
-            step_size=step_size, learn_step_size=learn_step_size,
-            per_param_step_size=per_param_step_size,
-            num_adaptation_steps=num_adaptation_steps, scheduler=scheduler,
-            loss_function=loss_function, device=device)

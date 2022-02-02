@@ -23,6 +23,7 @@ def main(args):
             hf["shear1"][i] = data["Shear1"].data[..., np.newaxis].astype(np.float32)
             hf["shear2"][i] = data["Shear2"].data[..., np.newaxis].astype(np.float32)
             hf["kappa_id"][i] = data["PRIMARY"].header["SUBID"]
+            hf["pixel_scale"][i] = data["PRIMARY"].header["CD1_1"]
 
 
 if __name__ == "__main__":
