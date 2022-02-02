@@ -4,5 +4,6 @@ torch
 torchmeta
 matplotlib
 sklearn
+pandas
 #vsitmann/siren
 #tristandeleu/pytorch-maml
