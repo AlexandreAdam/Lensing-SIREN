@@ -54,7 +54,7 @@ class BatchLinear(nn.Linear, MetaModule):
         return output
 
 
-class SineLayer(nn.Module, MetaModule):
+class SineLayer(MetaModule):
     # See paper sec. 3.2, final paragraph, and supplement Sec. 1.5 for discussion of omega_0.
 
     # If is_first=True, omega_0 is a frequency factor which simply multiplies the activations before the
@@ -86,7 +86,7 @@ class SineLayer(nn.Module, MetaModule):
         return torch.sin(self.omega_0 * intermed)
 
 
-class Siren(nn.Module):
+class Siren(MetaModule):
     def __init__(
             self,
             in_features,
