@@ -45,20 +45,20 @@ class TNGDataset(Dataset):
         train_index = self.train_split[index % len(self.train_split)]
         test_index = self.test_split[index % len(self.test_split)]
         if self.cache != {}:
-            train_kappa = torch.tensor(self.cache["kappa"][train_index].ravel(), device=self.device)
-            train_psi = torch.tensor(self.cache["psi"][train_index].ravel(), device=self.device)
-            train_alpha = torch.flatten(torch.tensor(self.cache["alpha"][train_index], device=self.device), 0, 1)
-            test_kappa = torch.tensor(self.cache["kappa"][test_index].ravel(), device=self.device)
-            test_psi = torch.tensor(self.cache["psi"][test_index].ravel(), device=self.device)
-            test_alpha = torch.flatten(torch.tensor(self.cache["alpha"][test_index], device=self.device), 0, 1)
+            train_kappa = torch.tensor(self.cache["kappa"][train_index].ravel(), device=self.device).view(-1, 1)
+            train_psi = torch.tensor(self.cache["psi"][train_index].ravel(), device=self.device).view(-1, 1)
+            train_alpha = torch.flatten(torch.tensor(self.cache["alpha"][train_index], device=self.device), 0, 1).view(-1, 1)
+            test_kappa = torch.tensor(self.cache["kappa"][test_index].ravel(), device=self.device).view(-1, 1)
+            test_psi = torch.tensor(self.cache["psi"][test_index].ravel(), device=self.device).view(-1, 1)
+            test_alpha = torch.flatten(torch.tensor(self.cache["alpha"][test_index], device=self.device), 0, 1).view(-1, 1)
         else:
             with h5py.File(self.filepath, "r") as hf:
-                train_kappa = torch.tensor(hf["kappa"][train_index].ravel(), device=self.device)
-                train_psi = torch.tensor(hf["psi"][train_index].ravel(), device=self.device)
-                train_alpha = torch.flatten(torch.tensor(hf["alpha"][train_index], device=self.device), 0, 1)
-                test_kappa = torch.tensor(hf["kappa"][test_index].ravel(), device=self.device)
-                test_psi = torch.tensor(hf["psi"][test_index].ravel(), device=self.device)
-                test_alpha = torch.flatten(torch.tensor(hf["alpha"][test_index], device=self.device), 0, 1)
+                train_kappa = torch.tensor(hf["kappa"][train_index].ravel(), device=self.device).view(-1, 1)
+                train_psi = torch.tensor(hf["psi"][train_index].ravel(), device=self.device).view(-1, 1)
+                train_alpha = torch.flatten(torch.tensor(hf["alpha"][train_index], device=self.device), 0, 1).view(-1, 1)
+                test_kappa = torch.tensor(hf["kappa"][test_index].ravel(), device=self.device).view(-1, 1)
+                test_psi = torch.tensor(hf["psi"][test_index].ravel(), device=self.device).view(-1, 1)
+                test_alpha = torch.flatten(torch.tensor(hf["alpha"][test_index], device=self.device), 0, 1).view(-1, 1)
         out["train"] = [
             self.coordinates,
             {

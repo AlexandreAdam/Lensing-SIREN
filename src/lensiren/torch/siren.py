@@ -96,7 +96,8 @@ class Siren(MetaModule):
             outermost_linear=False,
             first_omega_0:float=30,
             hidden_omega_0:float=30.,
-            special_first=True):
+            special_first=True
+    ):
         super().__init__()
         self.hidden_omega_0 = hidden_omega_0
 
