@@ -3,9 +3,9 @@ import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
-
+import numpy as np
 from datetime import datetime
-import os, json
+import os, json, time
 
 DATE = datetime.now().strftime("%y%m%d%H%M%S")
 
@@ -49,9 +49,15 @@ def main(args):
     filepath = os.path.join(os.getenv("LSIREN_PATH"), "data", args.dataset)
     dataset = TNGDataset(filepath, indices=None if args.data_len is None else list(range(args.data_len)))
     dataloader = DataLoader(dataset, batch_size=args.batch_size)
+    global_start = time.time()
     history = {"loss": []}
     global_step = 0
+    estimated_time_for_epoch = 0
+    out_of_time = False
     for epoch in range(args.epochs):
+        if (time.time() - global_start) > args.max_time*3600 - estimated_time_for_epoch:
+            break
+        epoch_start = time.time()
         epoch_loss = 0.
         for step, sample in enumerate(dataloader):
             global_step += 1
@@ -87,7 +93,8 @@ def main(args):
             plt.show()
         if not epoch % args.epochs_til_checkpoint and epoch:
             torch.save(siren.state_dict(), os.path.join(model_dir, 'model_epoch_%04d.pth' % epoch))
-
+        if epoch > 0:  # First epoch is always very slow and not a good estimate of an epoch time.
+            estimated_time_for_epoch = time.time() - epoch_start
     torch.save(siren.state_dict(), os.path.join(model_dir, 'model_final.pth'))
     return history
 
@@ -111,6 +118,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", default=2, type=int, help="Number of tasks in the inner loop")
     parser.add_argument("--epochs_til_checkpoint", default=2)
     parser.add_argument("--log_dir", default="logs")
+    parser.add_argument("--max_time", default=np.inf, type=float)
     parser.add_argument("--use_cuda", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()

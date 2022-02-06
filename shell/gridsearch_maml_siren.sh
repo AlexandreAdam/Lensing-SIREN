@@ -26,4 +26,5 @@ python $LSIREN_PATH/gridsearch.py\
   --num_adaptation_steps 3 5 7 9\
   --batch_size 2 8 16\
   --epochs_til_checkpoint 2\
-  --use_cuda
+  --use_cuda\
+  --max_time=10
