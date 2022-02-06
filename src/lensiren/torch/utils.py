@@ -23,6 +23,8 @@ SOFTWARE.
 """
 import torch
 from collections import OrderedDict
+import io
+import matplotlib.pyplot as plt
 
 
 def compute_accuracy(logits, targets):
