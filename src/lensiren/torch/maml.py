@@ -5,7 +5,7 @@ from collections import OrderedDict
 from lensiren.torch.loss import SirenLoss
 
 
-class MAMLSiren(nn.Module):
+class MAML(nn.Module):
     def __init__(
             self,
             num_meta_steps,

@@ -1,8 +1,7 @@
-from lensiren.torch import Siren, TNGDataset, MAMLSiren
+from lensiren.torch import Siren, TNGDataset, MAML
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-import numpy as np
 import matplotlib.pyplot as plt
 
 from datetime import datetime
@@ -38,7 +37,7 @@ def main(args):
     device = torch.device('cuda' if args.use_cuda and torch.cuda.is_available() else 'cpu')
     siren.to(device)
 
-    meta_siren = MAMLSiren(
+    meta_siren = MAML(
         num_meta_steps=args.num_adaptation_steps,
         hypo_module=siren,
         init_lr=args.step_size,

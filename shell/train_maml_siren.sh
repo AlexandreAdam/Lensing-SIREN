@@ -17,9 +17,6 @@ python $LSIREN_PATH/meta_train_siren.py\
   --learning_rate=1e-3\
   --step_size=1e-3\
   --loss_type=image\
-  --learn_step_size\
-  --per_param_step_size\
-  --num_adaptation_steps=1\
+  --num_adaptation_steps=5\
   --batch_size=1\
-  --max_batches=10\
   --use_cuda
