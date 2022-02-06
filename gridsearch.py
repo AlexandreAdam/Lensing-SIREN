@@ -159,6 +159,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", default=2, type=int, help="Number of tasks in the inner loop")
     parser.add_argument("--epochs_til_checkpoint", default=2)
     parser.add_argument("--log_dir", default="logs")
+    parser.add_argument("--max_time", default=np.inf, type=float)
     parser.add_argument("--use_cuda", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
