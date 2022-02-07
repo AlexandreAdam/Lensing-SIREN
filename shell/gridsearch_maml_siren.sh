@@ -24,7 +24,7 @@ python $LSIREN_PATH/gridsearch.py\
   --loss_type=image\
   --lr_type=global\
   --num_adaptation_steps 3 5 7 9\
-  --batch_size 2 8 16\
+  --batch_size=4\
   --epochs_til_checkpoint 2\
   --use_cuda\
   --max_time=10
