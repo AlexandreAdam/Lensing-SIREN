@@ -110,7 +110,7 @@ if __name__ == '__main__':
     parser.add_argument("--hidden_omega", default=0.5, type=float)
     parser.add_argument("--hidden_layers", default=2, type=int, help="Number of SIREN hidden layers")
     parser.add_argument("--hidden_features", default=50, type=int, help="Number of SIREN hidden feature per layers")
-    parser.add_argument("--learning_rate", default=5e-3, help="Outer loop learning rate")
+    parser.add_argument("--learning_rate", default=5e-3, type=float, help="Outer loop learning rate")
     parser.add_argument("--step_size", default=0.05, type=float, help="Inner loop learning rate")
     parser.add_argument("--loss_type", default="image", help="'image' (default), 'gradient', 'laplace', 'image_gradient', 'image_laplace', 'gradient_laplace' or 'image_gradient_laplace'")
     parser.add_argument("--lr_type", default="static", help="'static' (default), 'global', 'per_step', 'per_parameter', 'per_parameter_per_step'")
