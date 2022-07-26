@@ -1,8 +1,10 @@
 import torch
 from torch.utils.data import Dataset
 import h5py
+import torchvision.transforms as T
 import numpy as np
 
+DTYPE = torch.float32
 
 class TNGDataset(Dataset):
     """
@@ -26,12 +28,13 @@ class TNGDataset(Dataset):
             self._total_len = self.cache["kappa"].shape[0]
             self.pixels = self.cache["kappa"].shape[1]
             self.pixel_scale = self.cache["pixel_scale"]
-
         else:
             with h5py.File(filepath, "r") as hf:
                 self._total_len = hf["kappa"].shape[0]
                 self.pixels = hf["kappa"].shape[1]
                 self.pixel_scale = hf["pixel_scale"][0]  # assumes it's all the same
+
+        self.pixels = 64
         x = torch.linspace(-1, 1, self.pixels, device=device) * self.pixel_scale * self.pixels
         x, y = torch.meshgrid(x, x)
         self.coordinates = torch.stack([torch.ravel(x), torch.ravel(y)], dim=1).requires_grad_()
@@ -42,18 +45,24 @@ class TNGDataset(Dataset):
         else:
             self.indices = indices
             self._len = len(indices)
+        self.T = T.CenterCrop(self.pixels)
 
     def __getitem__(self, index):
         index = self.indices[index]
         if self.cache != {}:
-            train_kappa = torch.tensor(self.cache["kappa"][index].ravel(), device=self.device).view(-1, 1)
-            train_psi = torch.tensor(self.cache["psi"][index].ravel(), device=self.device).view(-1, 1)
-            train_alpha = torch.flatten(torch.tensor(self.cache["alpha"][index], device=self.device), 0, 1)
+            train_kappa = torch.tensor(self.cache["kappa"][index].ravel(), device=self.device, dtype=DTYPE).view(-1, 1)
+            train_psi = torch.tensor(self.cache["psi"][index].ravel(), device=self.device, dtype=DTYPE).view(-1, 1)
+            train_alpha = torch.flatten(torch.tensor(self.cache["alpha"][index], device=self.device, dtype=DTYPE), 0, 1)
         else:
             with h5py.File(self.filepath, "r") as hf:
-                train_kappa = torch.tensor(hf["kappa"][index].ravel(), device=self.device).view(-1, 1)
-                train_psi = torch.tensor(hf["psi"][index].ravel(), device=self.device).view(-1, 1)
-                train_alpha = torch.flatten(torch.tensor(hf["alpha"][index], device=self.device), 0, 1)
+                # train_kappa = torch.tensor(hf["kappa"][index].ravel(), device=self.device).view(-1, 1)
+                # train_psi = torch.tensor(hf["psi"][index].ravel(), device=self.device).view(-1, 1)
+                # train_alpha = torch.flatten(torch.tensor(hf["alpha"][index], device=self.device), 0, 1)
+                train_kappa = torch.ravel(self.T(torch.tensor(hf["kappa"][index], device=self.device, dtype=DTYPE).squeeze())).view(-1, 1)
+                train_psi = torch.ravel(self.T(torch.tensor(hf["psi"][index], device=self.device, dtype=DTYPE).squeeze())).view(-1, 1)
+                train_alpha = torch.tensor(hf["alpha"][index], device=self.device, dtype=DTYPE)
+                train_alpha = torch.transpose(self.T(torch.transpose(train_alpha, 0, 2)), 0, 2)
+                train_alpha = torch.flatten(train_alpha, 0, 1)
         out = [
             self.coordinates,
             {

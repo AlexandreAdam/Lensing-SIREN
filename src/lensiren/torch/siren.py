@@ -10,6 +10,7 @@ siren repo.
 
 from .modules import BatchLinear
 from torchmeta.modules import MetaModule, MetaSequential
+from torch.nn.parameter import Parameter
 import torch
 import math
 from torch import nn
@@ -52,6 +53,18 @@ class BatchLinear(nn.Linear, MetaModule):
         output = input.matmul(weight.permute(*[i for i in range(len(weight.shape) - 2)], -1, -2))
         output += bias.unsqueeze(-2)
         return output
+
+
+class BatchScalar(MetaModule):
+    def __init__(self, initial_value=1.):
+        super(BatchScalar, self).__init__()
+        self.scalar = Parameter(data=torch.Tensor([[initial_value]]))
+
+    def forward(self, input, params=None):
+        if params is None:
+            params = OrderedDict(self.named_parameters())
+        scalar = params.get("scalar")
+        return scalar * input
 
 
 class SineLayer(MetaModule):
@@ -117,7 +130,7 @@ class Siren(MetaModule):
             self.net.append(MetaSequential(
                 BatchLinear(hidden_features, out_features), Sine(omega_0=hidden_omega_0)
             ))
-
+        self.net.append(BatchScalar())
         self.net = MetaSequential(*self.net)
         self.net.apply(lambda m: self.weight_init(m, hidden_omega_0, is_first=False))
         if special_first:
